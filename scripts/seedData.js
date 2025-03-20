@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 require("dotenv").config();
-const { sqlDB, connectSQL } = require("../config/sqlConfig");
+const { sequelize, connectSQL } = require("../config/sqlConfig"); // ✅ Use sequelize instead of sqlDB
 const connectMongoDB = require("../config/mongo");
 const fetchFlightData = require("../config/aviationstack");
 const Flight = require("../models/flight.model");
@@ -28,31 +28,33 @@ const insertAirports = async () => {
       longitude FLOAT
     );
   `;
-  await sqlDB.query(createTableQuery);
+  await sequelize.query(createTableQuery); // ✅ Use sequelize.query instead of sqlDB.query
 
-  // Filter only airports that have a valid name and city
+  // Filter only valid airports
   const validAirports = airportData.data
-    .filter((airport) => airport.airport_name && airport.city_iata_code) // Ensure both fields exist
-    .slice(0, 5) // Take only 5 airports
+    .filter((airport) => airport.airport_name && airport.city_iata_code)
+    .slice(0, 5)
     .map((airport) => [
-      airport.airport_name, // Corrected field name
+      airport.airport_name,
       airport.iata_code || null,
       airport.icao_code || null,
-      airport.country_name, // Corrected field name
-      airport.city_iata_code, // Corrected field name
+      airport.country_name,
+      airport.city_iata_code,
       airport.latitude || null,
       airport.longitude || null,
     ]);
 
   if (validAirports.length === 0) {
-    console.error("❌ No valid airports with name and city found!");
+    console.error("❌ No valid airports found!");
     return;
   }
 
   // Insert Data
-  const insertQuery =
-    "INSERT INTO Airport (name, iata_code, icao_code, country, city, latitude, longitude) VALUES ?";
-  await sqlDB.query(insertQuery, [validAirports]);
+  const insertQuery = `
+    INSERT INTO Airport (name, iata_code, icao_code, country, city, latitude, longitude) 
+    VALUES ?
+  `;
+  await sequelize.query(insertQuery, { replacements: [validAirports] }); // ✅ Fixed insert statement
 
   console.log(`✅ ${validAirports.length} German airports inserted into SQL database.`);
 };
@@ -62,7 +64,7 @@ const insertFlights = async () => {
 
   let validFlights = [];
   let offset = 0;
-  const limit = 20; // Fetch more to ensure we get 10 valid flights
+  const limit = 20;
 
   while (validFlights.length < 10) {
     const flightData = await fetchFlightData("flights", { limit, offset });
@@ -72,7 +74,6 @@ const insertFlights = async () => {
       break;
     }
 
-    // Function to map API flight status to predefined statuses
     const mapStatus = (apiStatus) => {
       switch (apiStatus) {
         case "scheduled":
@@ -83,11 +84,10 @@ const insertFlights = async () => {
         case "cancelled":
           return "Cancelled";
         default:
-          return "On Time"; // Default if status is unknown
+          return "On Time";
       }
     };
 
-    // Process flight data
     const flights = flightData.data
       .map((flight) => {
         if (
@@ -98,7 +98,7 @@ const insertFlights = async () => {
           !flight.departure?.scheduled ||
           !flight.arrival?.scheduled
         ) {
-          return null; // Ignore flights missing required fields
+          return null;
         }
 
         return {
@@ -111,20 +111,19 @@ const insertFlights = async () => {
           scheduled_arrival: new Date(flight.arrival.scheduled),
           actual_arrival: flight.arrival.estimated ? new Date(flight.arrival.estimated) : null,
           status: mapStatus(flight.flight_status),
-          delay_duration: flight.departure.delay || 0, // Default to 0 if no delay
+          delay_duration: flight.departure.delay || 0,
         };
       })
-      .filter((flight) => flight !== null); // Remove invalid flights
+      .filter((flight) => flight !== null);
 
     validFlights = [...validFlights, ...flights];
 
     if (validFlights.length < 10) {
       console.log(`🔄 Fetching more flights... (Currently: ${validFlights.length}/10)`);
-      offset += limit; // Increase offset to fetch more data
+      offset += limit;
     }
   }
 
-  // Trim the array to exactly 10 flights
   validFlights = validFlights.slice(0, 10);
 
   if (validFlights.length === 0) {
@@ -132,7 +131,6 @@ const insertFlights = async () => {
     return;
   }
 
-  // Insert into MongoDB
   await Flight.insertMany(validFlights);
   console.log(`✅ Successfully inserted ${validFlights.length} flights into MongoDB.`);
 };

@@ -1,5 +1,5 @@
 const { DataTypes } = require("sequelize");
-const { sequelize } = require("../config/sqlConfig"); // Import the Sequelize instance
+const { sequelize } = require("../config/sqlConfig");
 
 const Airport = sequelize.define(
   "Airport",
@@ -40,7 +40,7 @@ const Airport = sequelize.define(
   },
   {
     timestamps: false,
-    tableName: "Airport", // Ensure this matches your actual MySQL table name
+    tableName: "Airport",
   }
 );
 

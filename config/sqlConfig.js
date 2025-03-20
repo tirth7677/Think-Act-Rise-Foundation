@@ -8,7 +8,7 @@ const sequelize = new Sequelize(
   {
     host: process.env.MYSQL_HOST,
     dialect: "mysql",
-    logging: false, // Set to true if you want SQL queries to be logged
+    logging: false, // Set to true if you want to log queries
   }
 );
 
