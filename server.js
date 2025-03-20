@@ -2,12 +2,18 @@ const express = require("express");
 require("dotenv").config();
 const { connectSQL } = require("./config/sqlConfig");
 const connectMongoDB = require("./config/mongo");
+const airportRoutes = require("./routes/airport.routes");
+const flightRoutes = require("./routes/flight.routes");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 // Middleware
 app.use(express.json());
+
+// Routes
+app.use("/api/v1/airports", airportRoutes);
+app.use("/api/v1/flights", flightRoutes);
 
 // Connect Databases
 const startServer = async () => {
