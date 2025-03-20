@@ -1,4 +1,3 @@
-// models/delayedFlight.model.js
 const mongoose = require('mongoose');
 
 const DelayedFlightSchema = new mongoose.Schema({
